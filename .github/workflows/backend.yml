@@ -52,7 +52,7 @@ jobs:
     - name: Deploy to ECS
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-        task-definition: terraform/ecs-task-definition.json
+        task-definition: Terraform/ecs-task-definition.json
         service: my-backend-service
         cluster: my-cluster
         wait-for-service-stability: true
