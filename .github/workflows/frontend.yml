@@ -19,10 +19,14 @@ jobs:
         node-version: '14'
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        cd frontend
+        npm install
 
     - name: Build frontend
-      run: npm run build
+      run: |
+        cd frontend
+        npm run build
 
     - name: Login to AWS ECR
       id: login-ecr
@@ -33,6 +37,7 @@ jobs:
 
     - name: Build, tag, and push frontend Docker image
       run: |
+        cd frontend
         docker build -t my-frontend .
         docker tag my-frontend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-frontend:latest
         docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-frontend:latest
@@ -40,7 +45,7 @@ jobs:
     - name: Deploy to ECS
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-        task-definition: my-frontend
+        task-definition: ecs-task-definition.json
         service: my-frontend-service
         cluster: my-cluster
         wait-for-service-stability: true
