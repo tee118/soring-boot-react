@@ -1,6 +1,19 @@
 {
-    "family": "my-frontend-task",
+    "family": "my-task-family",
     "containerDefinitions": [
+      {
+        "name": "my-backend-container",
+        "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/my-backend:latest",
+        "cpu": 256,
+        "memory": 512,
+        "essential": true,
+        "portMappings": [
+          {
+            "containerPort": 8080,
+            "hostPort": 8080
+          }
+        ]
+      },
       {
         "name": "my-frontend-container",
         "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/my-frontend:latest",
