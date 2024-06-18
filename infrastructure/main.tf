@@ -76,16 +76,16 @@ resource "aws_db_subnet_group" "main" {
 
 resource "aws_ecr_repository" "backend" {
   name = "my-backend-repo"
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_ecr_repository" "frontend" {
   name = "my-frontend-repo"
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
@@ -102,9 +102,9 @@ resource "aws_iam_role" "ecs_task_execution_role" {
       }
     ]
   })
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
