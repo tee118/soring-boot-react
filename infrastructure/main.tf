@@ -102,7 +102,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_role_policy" "ecr_pull_policy" {
+resource "aws_iam_policy" "ecr_pull_policy" {
   name = "ecr_pull_policy"
   policy = jsonencode({
     Version = "2012-10-17"
@@ -122,7 +122,7 @@ resource "aws_iam_role_policy" "ecr_pull_policy" {
 
 resource "aws_iam_role_policy_attachment" "ecr_pull_policy_attachment" {
   role = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_role_policy.ecr_pull_policy.arn
+  policy_arn = aws_iam_policy.ecr_pull_policy.arn
 }
 
 resource "aws_ecs_cluster" "my_cluster" {
