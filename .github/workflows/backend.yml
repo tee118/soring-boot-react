@@ -49,6 +49,11 @@ jobs:
         docker tag my-backend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
         docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
 
+    - name: Replace placeholders in ECS task definition
+      run: |
+        sed -i 's/ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g' infrastructure/ecs-task-definition.json
+        sed -i 's/REGION/${{ secrets.AWS_REGION }}/g' infrastructure/ecs-task-definition.json
+
     - name: Deploy to ECS
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
@@ -56,6 +61,3 @@ jobs:
         service: my-backend-service
         cluster: my-cluster
         wait-for-service-stability: true
-      env:
-        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}

@@ -3,7 +3,7 @@
   "containerDefinitions": [
     {
       "name": "my-backend-container",
-      "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/my-backend:latest",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/my-backend:latest",
       "cpu": 256,
       "memory": 512,
       "essential": true,
@@ -16,7 +16,7 @@
     },
     {
       "name": "my-frontend-container",
-      "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/my-frontend:latest",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/my-frontend:latest",
       "cpu": 256,
       "memory": 512,
       "essential": true,
