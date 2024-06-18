@@ -2,6 +2,22 @@ provider "aws" {
   region = "eu-west-2"
 }
 
+terraform {
+  backend "s3" {
+    bucket         = "statelockterraform"
+    key            = "terraform.tfstate"
+    region         = "eu-west-2"
+    dynamodb_table = "terraform-lock-table"
+  }
+}
+
+# Fetch current account ID and region
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {
+  current = true
+}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -81,6 +97,17 @@ resource "aws_s3_bucket" "terraform_state" {
   bucket = "statelockterraform"
 }
 
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-lock-table"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+
 resource "aws_ecs_cluster" "my_cluster" {
   name = "my-cluster"
 }
@@ -124,7 +151,7 @@ resource "aws_ecs_task_definition" "backend_task_def" {
   container_definitions = jsonencode([
     {
       name      = "my-backend-container"
-      image     = "${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/my-backend:latest"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/my-backend:latest"
       cpu       = 256
       memory    = 512
       essential = true
@@ -149,7 +176,7 @@ resource "aws_ecs_task_definition" "frontend_task_def" {
   container_definitions = jsonencode([
     {
       name      = "my-frontend-container"
-      image     = "${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/my-frontend:latest"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/my-frontend:latest"
       cpu       = 256
       memory    = 512
       essential = true
