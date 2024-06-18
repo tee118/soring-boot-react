@@ -91,3 +91,88 @@ resource "aws_dynamodb_table" "terraform_locks" {
     type = "S"
   }
 }
+
+# Add ECS cluster
+resource "aws_ecs_cluster" "my_cluster" {
+  name = "my-cluster"
+}
+
+# Optional: Add ECS service
+resource "aws_ecs_service" "backend_service" {
+  name            = "my-backend-service"
+  cluster         = aws_ecs_cluster.my_cluster.id
+  task_definition = aws_ecs_task_definition.backend_task_def.arn
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = aws_subnet.subnet[*].id
+    security_groups = [aws_security_group.main.id]
+  }
+
+  launch_type = "FARGATE"
+}
+
+resource "aws_ecs_service" "frontend_service" {
+  name            = "my-frontend-service"
+  cluster         = aws_ecs_cluster.my_cluster.id
+  task_definition = aws_ecs_task_definition.frontend_task_def.arn
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = aws_subnet.subnet[*].id
+    security_groups = [aws_security_group.main.id]
+  }
+
+  launch_type = "FARGATE"
+}
+
+# Define ECS task definitions
+resource "aws_ecs_task_definition" "backend_task_def" {
+  family                   = "my-backend-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "my-backend-container"
+      image     = "${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/my-backend:latest"
+      cpu       = 256
+      memory    = 512
+      essential = true
+      portMappings = [
+        {
+          containerPort = 8080
+          hostPort      = 8080
+        }
+      ]
+    }
+  ])
+}
+
+resource "aws_ecs_task_definition" "frontend_task_def" {
+  family                   = "my-frontend-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "my-frontend-container"
+      image     = "${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/my-frontend:latest"
+      cpu       = 256
+      memory    = 512
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ]
+    }
+  ])
+}
