@@ -8,22 +8,45 @@ resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route_table" "main" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+}
+
 resource "aws_subnet" "subnet" {
   count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = true
+}
+
+resource "aws_route_table_association" "main" {
+  count = 2
+  subnet_id      = aws_subnet.subnet[count.index].id
+  route_table_id = aws_route_table.main.id
 }
 
 resource "aws_security_group" "main" {
   vpc_id = aws_vpc.main.id
-  ingress {
+  name   = "ecs-security-group"
+
+  egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  egress {
+
+  ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -53,10 +76,16 @@ resource "aws_db_subnet_group" "main" {
 
 resource "aws_ecr_repository" "backend" {
   name = "my-backend-repo"
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecr_repository" "frontend" {
   name = "my-frontend-repo"
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
@@ -73,6 +102,9 @@ resource "aws_iam_role" "ecs_task_execution_role" {
       }
     ]
   })
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
@@ -82,34 +114,6 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
 
 resource "aws_ecs_cluster" "my_cluster" {
   name = "my-cluster"
-}
-
-resource "aws_ecs_service" "backend_service" {
-  name            = "my-backend-service"
-  cluster         = aws_ecs_cluster.my_cluster.id
-  task_definition = aws_ecs_task_definition.backend_task_def.arn
-  desired_count   = 1
-
-  network_configuration {
-    subnets         = aws_subnet.subnet[*].id
-    security_groups = [aws_security_group.main.id]
-  }
-
-  launch_type = "FARGATE"
-}
-
-resource "aws_ecs_service" "frontend_service" {
-  name            = "my-frontend-service"
-  cluster         = aws_ecs_cluster.my_cluster.id
-  task_definition = aws_ecs_task_definition.frontend_task_def.arn
-  desired_count   = 1
-
-  network_configuration {
-    subnets         = aws_subnet.subnet[*].id
-    security_groups = [aws_security_group.main.id]
-  }
-
-  launch_type = "FARGATE"
 }
 
 resource "aws_ecs_task_definition" "backend_task_def" {
@@ -131,6 +135,28 @@ resource "aws_ecs_task_definition" "backend_task_def" {
         {
           containerPort = 8080
           hostPort      = 8080
+        }
+      ]
+      environment = [
+        {
+          name  = "DB_HOST"
+          value = aws_rds_cluster.default.endpoint
+        },
+        {
+          name  = "DB_PORT"
+          value = "3306"
+        },
+        {
+          name  = "DB_NAME"
+          value = var.db_name
+        },
+        {
+          name  = "DB_USERNAME"
+          value = var.db_username
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.db_password
         }
       ]
     }
@@ -160,4 +186,32 @@ resource "aws_ecs_task_definition" "frontend_task_def" {
       ]
     }
   ])
+}
+
+resource "aws_ecs_service" "backend_service" {
+  name            = "my-backend-service"
+  cluster         = aws_ecs_cluster.my_cluster.id
+  task_definition = aws_ecs_task_definition.backend_task_def.arn
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = aws_subnet.subnet[*].id
+    security_groups = [aws_security_group.main.id]
+  }
+
+  launch_type = "FARGATE"
+}
+
+resource "aws_ecs_service" "frontend_service" {
+  name            = "my-frontend-service"
+  cluster         = aws_ecs_cluster.my_cluster.id
+  task_definition = aws_ecs_task_definition.frontend_task_def.arn
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = aws_subnet.subnet[*].id
+    security_groups = [aws_security_group.main.id]
+  }
+
+  launch_type = "FARGATE"
 }
