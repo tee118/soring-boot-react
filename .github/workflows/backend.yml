@@ -49,15 +49,12 @@ jobs:
         docker tag my-backend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
         docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
 
-    - name: Replace placeholders in ECS task definition
+    - name: Apply Terraform configuration
       run: |
-        sed -i 's/ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g' infrastructure/ecs-task-definition.json
-        sed -i 's/REGION/${{ secrets.AWS_REGION }}/g' infrastructure/ecs-task-definition.json
-
-    - name: Deploy to ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: infrastructure/ecs-task-definition.json
-        service: my-backend-service
-        cluster: my-cluster
-        wait-for-service-stability: true
+        cd infrastructure
+        terraform init
+        terraform apply -auto-approve
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
