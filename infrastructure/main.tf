@@ -2,12 +2,17 @@ provider "aws" {
   region = "eu-west-2"
 }
 
-# Fetch current account ID and region
-data "aws_caller_identity" "current" {}
-
-data "aws_region" "current" {
-  current = true
+terraform {
+  backend "s3" {
+    bucket         = "statelockterraform"
+    key            = "terraform.tfstate"
+    region         = "eu-west-2"
+    dynamodb_table = "terraform-lock-table"
+  }
 }
+
+# Fetch current account ID
+data "aws_caller_identity" "current" {}
 
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
@@ -142,7 +147,7 @@ resource "aws_ecs_task_definition" "backend_task_def" {
   container_definitions = jsonencode([
     {
       name      = "my-backend-container"
-      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/my-backend:latest"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.eu-west-2.amazonaws.com/my-backend:latest"
       cpu       = 256
       memory    = 512
       essential = true
@@ -167,7 +172,7 @@ resource "aws_ecs_task_definition" "frontend_task_def" {
   container_definitions = jsonencode([
     {
       name      = "my-frontend-container"
-      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/my-frontend:latest"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.eu-west-2.amazonaws.com/my-frontend:latest"
       cpu       = 256
       memory    = 512
       essential = true
