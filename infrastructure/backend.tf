@@ -3,6 +3,6 @@ terraform {
     bucket         = "statelockterraform"
     key            = "terraform.tfstate"
     region         = "eu-west-2"
-    dynamodb_table = "terraform-locks"
+    dynamodb_table = "terraform-lock-table"
   }
 }

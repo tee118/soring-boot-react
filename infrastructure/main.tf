@@ -81,23 +81,10 @@ resource "aws_s3_bucket" "terraform_state" {
   bucket = "statelockterraform"
 }
 
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "terraform-locks"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-}
-
-# Add ECS cluster
 resource "aws_ecs_cluster" "my_cluster" {
   name = "my-cluster"
 }
 
-# Optional: Add ECS service
 resource "aws_ecs_service" "backend_service" {
   name            = "my-backend-service"
   cluster         = aws_ecs_cluster.my_cluster.id
@@ -126,7 +113,6 @@ resource "aws_ecs_service" "frontend_service" {
   launch_type = "FARGATE"
 }
 
-# Define ECS task definitions
 resource "aws_ecs_task_definition" "backend_task_def" {
   family                   = "my-backend-task"
   network_mode             = "awsvpc"
