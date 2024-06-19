@@ -5,14 +5,40 @@ data "aws_caller_identity" "current" {}
 data "aws_availability_zones" "available" {}
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
 
-resource "aws_route_table" "main" {
+resource "aws_eip" "main" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.main.id
+  subnet_id     = aws_subnet.public.id
+}
+
+resource "aws_subnet" "public" {
+  count                   = 1
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = element(data.aws_availability_zones.available.names, 0)
+}
+
+resource "aws_subnet" "private" {
+  count             = 1
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = element(data.aws_availability_zones.available.names, 0)
+}
+
+resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
@@ -21,18 +47,23 @@ resource "aws_route_table" "main" {
   }
 }
 
-resource "aws_subnet" "subnet" {
-  count                   = 2
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public[0].id
+  route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route_table_association" "main" {
-  count          = 2
-  subnet_id      = aws_subnet.subnet[count.index].id
-  route_table_id = aws_route_table.main.id
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private[0].id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_security_group" "main" {
@@ -52,22 +83,7 @@ resource "aws_security_group" "main" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "ecs-security-group"
-  }
 }
-
-# Additional egress rule specifically for port 443
-resource "aws_security_group_rule" "allow_https_outbound" {
-  type              = "egress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  security_group_id = aws_security_group.main.id
-  cidr_blocks       = ["0.0.0.0/0"]
-}
-
 
 resource "aws_rds_cluster" "default" {
   cluster_identifier      = "my-cluster"
@@ -86,7 +102,7 @@ resource "aws_rds_cluster" "default" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "my-db-subnet-group"
-  subnet_ids = aws_subnet.subnet[*].id
+  subnet_ids = [aws_subnet.private[0].id]
 }
 
 resource "aws_ecr_repository" "backend" {
@@ -100,11 +116,11 @@ resource "aws_ecr_repository" "frontend" {
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecs_task_execution_role"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
         }
@@ -118,27 +134,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_policy" "ecr_pull_policy" {
-  name   = "ecr_pull_policy"
+resource "aws_iam_role_policy" "ecr_pull_policy" {
+  name = "ecr_pull_policy"
+  role = aws_iam_role.ecs_task_execution_role.id
+
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
+        Effect = "Allow",
         Action = [
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
-          "ecr:GetAuthorizationToken"
-        ]
-        Effect = "Allow"
+          "ssm:GetParameters",
+          "secretsmanager:GetSecretValue",
+          "kms:Decrypt"
+        ],
         Resource = "*"
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_pull_policy_attachment" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.ecr_pull_policy.arn
 }
 
 resource "aws_ecs_cluster" "my_cluster" {
@@ -224,8 +239,9 @@ resource "aws_ecs_service" "backend_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = aws_subnet.subnet[*].id
+    subnets         = [aws_subnet.public[0].id, aws_subnet.private[0].id]
     security_groups = [aws_security_group.main.id]
+    assign_public_ip = true
   }
 
   launch_type = "FARGATE"
@@ -238,26 +254,42 @@ resource "aws_ecs_service" "frontend_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = aws_subnet.subnet[*].id
+    subnets         = [aws_subnet.public[0].id, aws_subnet.private[0].id]
     security_groups = [aws_security_group.main.id]
+    assign_public_ip = true
   }
 
   launch_type = "FARGATE"
-}
-
-# Optional: Configure VPC Endpoints for ECR and other services if using private subnets
-resource "aws_vpc_endpoint" "ecr_api" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.eu-west-2.ecr.api"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = aws_subnet.subnet[*].id
-  security_group_ids = [aws_security_group.main.id]
 }
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.eu-west-2.ecr.dkr"
   vpc_endpoint_type = "Interface"
-  subnet_ids        = aws_subnet.subnet[*].id
+  subnet_ids        = [aws_subnet.private[0].id]
+  security_group_ids = [aws_security_group.main.id]
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.eu-west-2.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private[0].id]
+  security_group_ids = [aws_security_group.main.id]
+}
+
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.eu-west-2.logs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private[0].id]
+  security_group_ids = [aws_security_group.main.id]
+}
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.eu-west-2.secretsmanager"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private[0].id]
   security_group_ids = [aws_security_group.main.id]
 }
