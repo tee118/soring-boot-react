@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json to the container
 COPY package*.json ./
 
-# Install dependencies including @webpack-cli/serve
-RUN npm install && npm install -D @webpack-cli/serve
+# Install dependencies including @webpack-cli/serve, webpack and webpack-cli
+RUN npm install && npm install -D webpack webpack-cli @webpack-cli/serve
 
 # Copy the rest of the application code to the container
 COPY . .
