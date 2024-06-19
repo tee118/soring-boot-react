@@ -154,12 +154,24 @@ resource "aws_iam_role_policy" "ecr_pull_policy" {
           "ecr:BatchGetImage",
           "ssm:GetParameters",
           "secretsmanager:GetSecretValue",
-          "kms:Decrypt"
+          "kms:Decrypt",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ],
         Resource = "*"
       }
     ]
   })
+}
+
+resource "aws_cloudwatch_log_group" "backend_log_group" {
+  name              = "/ecs/my-backend-task"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "frontend_log_group" {
+  name              = "/ecs/my-frontend-task"
+  retention_in_days = 7
 }
 
 resource "aws_ecs_cluster" "my_cluster" {
@@ -202,13 +214,17 @@ resource "aws_ecs_task_definition" "backend_task_def" {
         },
         {
           name  = "DB_USERNAME"
-          value = var.db_username
-        },
-        {
-          name  = "DB_PASSWORD"
           value = var.db_password
         }
-      ]
+      ],
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.backend_log_group.name,
+          awslogs-region        = "eu-west-2",
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
@@ -233,7 +249,15 @@ resource "aws_ecs_task_definition" "frontend_task_def" {
           containerPort = 80
           hostPort      = 80
         }
-      ]
+      ],
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.frontend_log_group.name,
+          awslogs-region        = "eu-west-2",
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
