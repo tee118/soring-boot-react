@@ -24,18 +24,18 @@ resource "aws_nat_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count                   = 1
+  count                   = 2
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   map_public_ip_on_launch = true
-  availability_zone       = element(data.aws_availability_zones.available.names, 0)
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
 }
 
 resource "aws_subnet" "private" {
-  count             = 1
+  count             = 2
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = element(data.aws_availability_zones.available.names, 0)
+  cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index + 2)
+  availability_zone = element(data.aws_availability_zones.available.names, count.index)
 }
 
 resource "aws_route_table" "public" {
@@ -48,7 +48,8 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public[0].id
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
@@ -62,7 +63,8 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private[0].id
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
 
@@ -102,7 +104,11 @@ resource "aws_rds_cluster" "default" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "my-db-subnet-group"
-  subnet_ids = [aws_subnet.private[0].id]
+  subnet_ids = aws_subnet.private[*].id
+
+  tags = {
+    Name = "My DB subnet group"
+  }
 }
 
 resource "aws_ecr_repository" "backend" {
@@ -239,7 +245,7 @@ resource "aws_ecs_service" "backend_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = [aws_subnet.public[0].id, aws_subnet.private[0].id]
+    subnets         = aws_subnet.public[*].id
     security_groups = [aws_security_group.main.id]
     assign_public_ip = true
   }
@@ -254,7 +260,7 @@ resource "aws_ecs_service" "frontend_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = [aws_subnet.public[0].id, aws_subnet.private[0].id]
+    subnets         = aws_subnet.public[*].id
     security_groups = [aws_security_group.main.id]
     assign_public_ip = true
   }
@@ -266,7 +272,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.eu-west-2.ecr.dkr"
   vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private[0].id]
+  subnet_ids        = aws_subnet.private[*].id
   security_group_ids = [aws_security_group.main.id]
 }
 
@@ -274,7 +280,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.eu-west-2.ecr.api"
   vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private[0].id]
+  subnet_ids        = aws_subnet.private[*].id
   security_group_ids = [aws_security_group.main.id]
 }
 
@@ -288,7 +294,7 @@ resource "aws_vpc_endpoint" "logs" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.eu-west-2.logs"
   vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private[0].id]
+  subnet_ids        = aws_subnet.private[*].id
   security_group_ids = [aws_security_group.main.id]
 }
 
@@ -296,6 +302,6 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.eu-west-2.secretsmanager"
   vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.private[0].id]
+  subnet_ids        = aws_subnet.private[*].id
   security_group_ids = [aws_security_group.main.id]
 }
