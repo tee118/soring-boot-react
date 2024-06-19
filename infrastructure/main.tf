@@ -15,12 +15,12 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_eip" "main" {
-  vpc = true
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.main.id
-  subnet_id     = aws_subnet.public.id
+  subnet_id     = aws_subnet.public[0].id
 }
 
 resource "aws_subnet" "public" {
@@ -276,6 +276,12 @@ resource "aws_vpc_endpoint" "ecr_api" {
   vpc_endpoint_type = "Interface"
   subnet_ids        = [aws_subnet.private[0].id]
   security_group_ids = [aws_security_group.main.id]
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.eu-west-2.s3"
+  route_table_ids = [aws_route_table.private.id]
 }
 
 resource "aws_vpc_endpoint" "logs" {
