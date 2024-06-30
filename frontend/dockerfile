@@ -9,6 +9,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Ensure that webpack is globally installed and has executable permissions
+RUN npm install -g webpack webpack-cli
+RUN chmod +x /usr/local/bin/webpack
+
 # Copy the rest of the application code to the container
 COPY . .
 
