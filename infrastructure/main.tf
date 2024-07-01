@@ -176,7 +176,10 @@ resource "aws_ecs_task_definition" "backend_task_def" {
         }
       ],
       environment = [
-        # Remove DB related environment variables
+        {
+          name  = "SPRING_PROFILES_ACTIVE"
+          value = "h2"
+        }
       ],
       logConfiguration = {
         logDriver = "awslogs",
