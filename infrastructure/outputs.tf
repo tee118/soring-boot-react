@@ -13,11 +13,3 @@ output "private_subnet_ids" {
 output "security_group_id" {
   value = aws_security_group.ecs_sg.id
 }
-
-output "db_endpoint" {
-  value = aws_rds_cluster.default.endpoint
-}
-
-output "db_subnet_group_name" {
-  value = aws_db_subnet_group.main.name
-}
