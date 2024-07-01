@@ -8,8 +8,8 @@ WORKDIR /frontend
 COPY package*.json ./
 RUN npm install
 
-# Install Webpack globally
-RUN npm install -g webpack webpack-cli
+# Install Webpack and http-server globally
+RUN npm install -g webpack webpack-cli http-server
 
 # Copy the rest of the application code
 COPY . .
@@ -17,11 +17,8 @@ COPY . .
 # Build the application using Webpack
 RUN webpack --config webpack.config.js
 
-# Install http-server to serve the build directory
-RUN npm install -g http-server
-
 # Expose the port the app runs on
 EXPOSE 80
 
 # Define the command to run the app, serving the built directory
-CMD ["http-server", "src/main/resources/static/built", "-p", "80"]
+CMD ["http-server", "src/main/resources/static", "-p", "80"]

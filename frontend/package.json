@@ -28,7 +28,7 @@
     "stompjs": "^2.3.3"
   },
   "scripts": {
-    "start": "http-server src/main/resources/static/built -p 80",
+    "start": "http-server src/main/resources/static -p 80",
     "build": "webpack --config webpack.config.js"
   },
   "devDependencies": {
