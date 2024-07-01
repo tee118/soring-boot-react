@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "eu-west-2"
+}
+
 # Fetch current account ID
 data "aws_caller_identity" "current" {}
 
@@ -93,10 +97,10 @@ resource "aws_security_group" "rds_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port         = 3306
-    to_port           = 3306
-    protocol          = "tcp"
-    security_groups   = [aws_security_group.ecs_sg.id] # Allow traffic from the ECS security group
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id] # Allow traffic from the ECS security group
   }
 
   egress {
@@ -118,8 +122,9 @@ resource "aws_rds_cluster" "default" {
   skip_final_snapshot     = true
 
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  db_subnet_group_name = aws_db_subnet_group.main.name
+  enabled_cloudwatch_logs_exports = ["audit", "error", "general", "slowquery"]
 }
 
 resource "aws_db_subnet_group" "main" {
@@ -191,6 +196,11 @@ resource "aws_cloudwatch_log_group" "backend_log_group" {
 
 resource "aws_cloudwatch_log_group" "frontend_log_group" {
   name              = "/ecs/my-frontend-task"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "rds_log_group" {
+  name              = "/aws/rds/cluster/my-cluster"
   retention_in_days = 7
 }
 
