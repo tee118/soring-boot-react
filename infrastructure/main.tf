@@ -179,6 +179,38 @@ resource "aws_ecs_task_definition" "backend_task_def" {
         {
           name  = "SPRING_PROFILES_ACTIVE"
           value = "h2"
+        },
+        {
+          name  = "SPRING_DATASOURCE_URL"
+          value = "jdbc:h2:mem:testdb"
+        },
+        {
+          name  = "SPRING_DATASOURCE_USERNAME"
+          value = "sa"
+        },
+        {
+          name  = "SPRING_DATASOURCE_PASSWORD"
+          value = "password"
+        },
+        {
+          name  = "SPRING_JPA_HIBERNATE_DDL_AUTO"
+          value = "update"
+        },
+        {
+          name  = "SPRING_JPA_SHOW_SQL"
+          value = "true"
+        },
+        {
+          name  = "SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT"
+          value = "org.hibernate.dialect.H2Dialect"
+        },
+        {
+          name  = "SPRING_H2_CONSOLE_ENABLED"
+          value = "true"
+        },
+        {
+          name  = "SPRING_H2_CONSOLE_PATH"
+          value = "/h2-console"
         }
       ],
       logConfiguration = {
