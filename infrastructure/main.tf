@@ -321,7 +321,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   service_name      = "com.amazonaws.eu-west-2.ecr.dkr"
   vpc_endpoint_type = "Interface"
   subnet_ids        = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.main.id]
+  security_group_ids = [aws_security_group.ecs_sg.id]
 }
 
 resource "aws_vpc_endpoint" "ecr_api" {
@@ -329,7 +329,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   service_name      = "com.amazonaws.eu-west-2.ecr.api"
   vpc_endpoint_type = "Interface"
   subnet_ids        = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.main.id]
+  security_group_ids = [aws_security_group.ecs_sg.id]
 }
 
 resource "aws_vpc_endpoint" "s3" {
@@ -343,7 +343,7 @@ resource "aws_vpc_endpoint" "logs" {
   service_name      = "com.amazonaws.eu-west-2.logs"
   vpc_endpoint_type = "Interface"
   subnet_ids        = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.main.id]
+  security_group_ids = [aws_security_group.ecs_sg.id]
 }
 
 resource "aws_vpc_endpoint" "secretsmanager" {
@@ -351,5 +351,5 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   service_name      = "com.amazonaws.eu-west-2.secretsmanager"
   vpc_endpoint_type = "Interface"
   subnet_ids        = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.main.id]
+  security_group_ids = [aws_security_group.ecs_sg.id]
 }
