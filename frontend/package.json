@@ -28,7 +28,7 @@
     "http-server": "^0.12.3"
   },
   "scripts": {
-    "start": "http-server build -p 80",
+    "start": "http-server src/main/resources/static/built -p 80",
     "build": "webpack --config webpack.config.js"
   },
   "devDependencies": {
