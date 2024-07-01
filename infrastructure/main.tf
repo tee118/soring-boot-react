@@ -68,7 +68,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_security_group" "main" {
+resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
   name   = "ecs-security-group"
 
@@ -87,6 +87,26 @@ resource "aws_security_group" "main" {
   }
 }
 
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-security-group"
+  description = "Allow MySQL traffic"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port         = 3306
+    to_port           = 3306
+    protocol          = "tcp"
+    security_groups   = [aws_security_group.ecs_sg.id] # Allow traffic from the ECS security group
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_rds_cluster" "default" {
   cluster_identifier      = "my-cluster"
   engine                  = "aurora-mysql"
@@ -97,7 +117,7 @@ resource "aws_rds_cluster" "default" {
   preferred_backup_window = "07:00-09:00"
   skip_final_snapshot     = true
 
-  vpc_security_group_ids = [aws_security_group.main.id]
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
   db_subnet_group_name = aws_db_subnet_group.main.name
 }
@@ -274,7 +294,7 @@ resource "aws_ecs_service" "backend_service" {
 
   network_configuration {
     subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.main.id]
+    security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
@@ -289,7 +309,7 @@ resource "aws_ecs_service" "frontend_service" {
 
   network_configuration {
     subnets         = aws_subnet.public[*].id
-    security_groups = [aws_security_group.main.id]
+    security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
