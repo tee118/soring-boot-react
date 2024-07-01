@@ -60,12 +60,6 @@ This project is a full-stack application consisting of a React frontend and a Sp
   - Private subnet IDs
   - Security group ID
 
-#### `variables.tf`
-- **Variables:**
-  - `db_username`: The username for the RDS instance
-  - `db_password`: The password for the RDS instance
-  - `db_name`: The name of the database
-
 #### `backend.tf`
 - **Provider and Backend Configuration:**
   - AWS provider with region `eu-west-2`
