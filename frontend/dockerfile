@@ -6,7 +6,6 @@ WORKDIR /app
 
 # Install app dependencies
 COPY package*.json ./
-
 RUN npm install
 
 # Ensure that webpack is globally installed and has executable permissions
@@ -19,8 +18,11 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Install http-server to serve the build directory
+RUN npm install -g http-server
+
 # Expose the port the app runs on
-EXPOSE 8080
+EXPOSE 80
 
 # Define the command to run the app
-CMD ["npm", "start"]
+CMD ["http-server", "build", "-p", "80"]
