@@ -87,51 +87,6 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-resource "aws_security_group" "rds_sg" {
-  name        = "rds-security-group"
-  description = "Allow MySQL traffic"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id] # Allow traffic from the ECS security group
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_rds_cluster" "default" {
-  cluster_identifier      = "my-cluster"
-  engine                  = "aurora-mysql"
-  master_username         = var.db_username
-  master_password         = var.db_password
-  database_name           = var.db_name
-  backup_retention_period = 5
-  preferred_backup_window = "07:00-09:00"
-  skip_final_snapshot     = true
-
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-
-  enabled_cloudwatch_logs_exports = ["audit", "error", "general", "slowquery"]
-}
-
-resource "aws_db_subnet_group" "main" {
-  name       = "my-db-subnet-group"
-  subnet_ids = aws_subnet.private[*].id
-
-  tags = {
-    Name = "My DB subnet group"
-  }
-}
-
 resource "aws_ecr_repository" "backend" {
   name = "my-backend-repo"
 }
@@ -195,11 +150,6 @@ resource "aws_cloudwatch_log_group" "frontend_log_group" {
   retention_in_days = 7
 }
 
-resource "aws_cloudwatch_log_group" "rds_log_group" {
-  name              = "/aws/rds/cluster/my-cluster"
-  retention_in_days = 7
-}
-
 resource "aws_ecs_cluster" "my_cluster" {
   name = "my-cluster"
 }
@@ -224,28 +174,9 @@ resource "aws_ecs_task_definition" "backend_task_def" {
           containerPort = 8080
           hostPort      = 8080
         }
-      ]
+      ],
       environment = [
-        {
-          name  = "DB_HOST"
-          value = aws_rds_cluster.default.endpoint
-        },
-        {
-          name  = "DB_PORT"
-          value = "3306"
-        },
-        {
-          name  = "DB_NAME"
-          value = var.db_name
-        },
-        {
-          name  = "DB_USERNAME"
-          value = var.db_username
-        },
-        {
-          name  = "DB_PASSWORD"
-          value = var.db_password
-        }
+        # Remove DB related environment variables
       ],
       logConfiguration = {
         logDriver = "awslogs",
