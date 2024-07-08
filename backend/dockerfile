@@ -7,8 +7,11 @@ WORKDIR /backend
 # Copy the application JAR file
 COPY target/*.jar /app.jar
 
+# Copy the application properties file
+COPY src/main/resources/application.properties /application.properties
+
 # Expose the port your application runs on
 EXPOSE 8080
 
-# Define the entry point for the container
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# Define the entry point for the container and ensure application.properties is used
+ENTRYPOINT ["java", "-Dspring.config.location=file:/application.properties", "-jar", "/app.jar"]
