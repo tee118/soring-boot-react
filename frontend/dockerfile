@@ -21,4 +21,4 @@ RUN webpack --config webpack.config.js
 EXPOSE 80
 
 # Define the command to run the app, serving the built directory
-CMD ["http-server", "src/main/resources/static", "-p", "80"]
+CMD ["http-server", "src/main/resources/static/built", "-p", "80"]
